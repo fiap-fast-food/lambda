@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 public class AuthenticateCustomerLambda implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(AuthenticateCustomerLambda.class);
     private final RestTemplate restTemplate;
-    private final String customerApiBaseUrl = "https://example.com/api";
+    private final String customerApiBaseUrl = "http://localhost:8080/";
 
     public AuthenticateCustomerLambda() {
         this.restTemplate = new RestTemplate();
