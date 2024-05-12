@@ -8,6 +8,7 @@ public class LambdaApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(LambdaApplication.class, args);
+
 	}
 
 }
