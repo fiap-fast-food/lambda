@@ -4,57 +4,36 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import org.slf4j.LoggerFactory;
-import org.springframework.cloud.gateway.route.RouteLocator;
-import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
-
-import java.util.logging.Logger;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class AuthenticateCustomerLambda implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(AuthenticateCustomerLambda.class);
-    private final RestTemplate restTemplate;
-    private final String customerApiBaseUrl = "http://localhost:8080/";
-
-    public AuthenticateCustomerLambda() {
-        this.restTemplate = new RestTemplate();
-    }
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final String apiUrl = "http://localhost:8080/";
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         String cpf = input.getPathParameters().get("cpf");
-        if (cpf == null || cpf.isEmpty()) {
-            return createErrorResponse(400, "CPF é obrigatório.");
-        }
+        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 
-        boolean isAuthenticated = checkCustomerExistence(cpf);
-        if (isAuthenticated) {
-            return createSuccessResponse("Cliente autenticado com sucesso.");
-        } else {
-            return createErrorResponse(404, "Cliente não encontrado.");
-        }
-    }
-
-    private boolean checkCustomerExistence(String cpf) {
         try {
-            String url = customerApiBaseUrl + "/identify/" + cpf;
-            ResponseEntity<?> result = restTemplate.getForEntity(url, Object.class);
-            return result.getStatusCode().is2xxSuccessful();
-        } catch (Exception e) {
-            return false;
+            URL url = new URL(apiUrl + "api/v1/customers/identify/" + cpf);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            int statusCode = connection.getResponseCode();
+            String responseBody = objectMapper.writeValueAsString(connection.getResponseMessage());
+
+            response.setStatusCode(statusCode);
+            response.setBody(responseBody);
+        } catch (IOException e) {
+            e.printStackTrace();
+            response.setStatusCode(500);
+            response.setBody("Erro interno do servidor.");
         }
-    }
 
-    private APIGatewayProxyResponseEvent createSuccessResponse(String message) {
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(200)
-                .withBody(message);
-    }
-
-    private APIGatewayProxyResponseEvent createErrorResponse(int statusCode, String message) {
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(statusCode)
-                .withBody(message);
+        return response;
     }
 }
