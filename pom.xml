@@ -38,11 +38,11 @@
 			<artifactId>aws-lambda-java-core</artifactId>
 			<version>1.2.1</version>
 		</dependency>
-		<!-- Para Maven -->
+
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-lambda-java-events</artifactId>
-			<version>3.11.0</version> <!-- Certifique-se de usar a versão mais recente -->
+			<version>3.11.0</version>
 		</dependency>
 
 		<dependency>
@@ -51,13 +51,17 @@
 			<optional>true</optional>
 		</dependency>
 
-		<!-- Para Maven -->
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-core</artifactId>
-			<version>1.12.487</version> <!-- Certifique-se de usar a versão mais recente -->
+			<version>1.12.487</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20210307</version>
+		</dependency>
 
 	</dependencies>
 

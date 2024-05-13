@@ -4,34 +4,49 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import lombok.SneakyThrows;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 public class AuthenticateCustomerLambda implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final String apiUrl = "http://localhost:8080/";
+    private final DataSourceProperties db;
+    private final CognitoAutenticator cognitoAutenticator;
 
+    public AuthenticateCustomerLambda() {
+        this.db = new DataSourceProperties();
+        this.cognitoAutenticator = new CognitoAutenticator();
+    }
+    public AuthenticateCustomerLambda(DataSourceProperties db, CognitoAutenticator cognitoAutenticator) {
+        this.db = db;
+        this.cognitoAutenticator = cognitoAutenticator;
+
+    }
+
+    @SneakyThrows
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+
         String cpf = input.getPathParameters().get("cpf");
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 
-        try {
-            URL url = new URL(apiUrl + "api/v1/customers/identify/" + cpf);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
+        try(Connection conn = DriverManager.getConnection(db.getHost(), db.getUsername(), db.getPassword())){
+            if(!conn.isValid(0)) {
+                System.out.println("Unable to connect to: " + db.getHost());
+                System.exit(0);
+            }
 
-            int statusCode = connection.getResponseCode();
-            String responseBody = objectMapper.writeValueAsString(connection.getResponseMessage());
+            PreparedStatement selectStatement = conn.prepareStatement("select from customer where customer.cpf = " + "'" +cpf+"'" );
+            ResultSet rs = selectStatement.executeQuery();
 
-            response.setStatusCode(statusCode);
-            response.setBody(responseBody);
-        } catch (IOException e) {
-            e.printStackTrace();
-            response.setStatusCode(500);
-            response.setBody("Erro interno do servidor.");
+            while(rs.next()) {
+                String name = rs.getString("name");
+                System.out.println(name);
+                String token = cognitoAutenticator.getToken();
+                response.setBody(token);
+            }
         }
 
         return response;
